@@ -1,42 +1,52 @@
-![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
+<!---
 
-# Tiny Tapeout Verilog Project Template
+This file is used to generate your project datasheet. Please fill in the information below and delete any unused
+sections.
 
-- [Read the documentation for project](docs/info.md)
+You can also include images in this folder and reference them in the markdown. Each image must be less than
+512 kb in size, and the combined size of all images must be less than 1 MB.
+-->
 
-## What is Tiny Tapeout?
+## How it works
 
-Tiny Tapeout is an educational project that aims to make it easier and cheaper than ever to get your digital and analog designs manufactured on a real chip.
+The design draws an animated black & white hypnotic spiral on a 640x480 @ 60 Hz VGA display
+(25.175 MHz pixel clock). It is a "Fermat spiral": the radius squared grows linearly with the angle.
 
-To learn more and get started, visit https://tinytapeout.com.
+For every pixel:
 
-## Set up your Verilog project
+1. The pixel position is centred on the screen, giving |dx| and |dy|.
+2. `r2 = dx^2 + dy^2` is computed with two small multipliers. Rings of constant `r2` are perfectly round circles.
+3. A smooth 8-bit angle (0..255 for a full turn) is computed with a tiny 5-bit division per octant:
+   `smaller / larger` is a good approximation of the angle, and the octant and quadrant bits are mirrored so the
+   angle grows continuously around the circle.
+4. `phase = r2/32 + arms * angle -/+ time`. The number of arms is any integer, because 256 * k wraps to 0.
+5. The top bit of `phase` selects black or white. R, G and B are all driven with the same value.
 
-1. Add your Verilog files to the `src` folder.
-2. Edit the [info.yaml](info.yaml) and update information about your project, paying special attention to the `source_files` and `top_module` properties. If you are upgrading an existing Tiny Tapeout project, check out our [online info.yaml migration tool](https://tinytapeout.github.io/tt-yaml-upgrade-tool/).
-3. Edit [docs/info.md](docs/info.md) and add a description of your project.
-4. Adapt the testbench to your design. See [test/README.md](test/README.md) for more information.
+A frame counter, incremented on every VSync, moves the phase by 4 units per frame so the rings flow outward
+(or inward) and the arms appear to spin.
 
-The GitHub action will automatically build the ASIC files using [LibreLane](https://www.zerotoasiccourse.com/terminology/librelane/).
+The datapath is pipelined in 3 stages; HSync, VSync and blanking are delayed by the same 3 clocks.
 
-## Enable GitHub actions to build the results page
+Inputs:
 
-- [Enabling GitHub Pages](https://tinytapeout.com/faq/#my-github-action-is-failing-on-the-pages-part)
+| Pin | Function |
+|-----|----------|
+| ui[0] | Reverse the flow direction |
+| ui[1] | Tighter rings |
+| ui[3:2] | Twist: 00 = 4 spiral arms (default), 01 = 1 arm, 10 = 8 arms, 11 = pure circles |
+| ui[4] | Invert black / white |
+| ui[5] | Soft grayscale shading instead of hard black / white |
 
-## Resources
+## How to test
 
-- [FAQ](https://tinytapeout.com/faq/)
-- [Digital design lessons](https://tinytapeout.com/digital_design/)
-- [Learn how semiconductors work](https://tinytapeout.com/siliwiz/)
-- [Join the community](https://tinytapeout.com/discord)
-- [Build your design locally](https://www.tinytapeout.com/guides/local-hardening/)
+Connect a VGA monitor through a Tiny VGA PMOD (see below), run the design at 25.175 MHz and pulse reset.
+With all inputs low you should see round rings flowing outward and twisting into a 4-arm spiral. Toggle the
+input switches to change the look.
 
-## What next?
+A cocotb testbench is included (`test/test.py`). It checks that HSync/VSync behave, that the output is pure
+black and white, that blanking is black, and that `ui[4]` inverts the picture. Run it with `make` in the `test` folder.
 
-- [Submit your design to the next shuttle](https://app.tinytapeout.com/).
-- Edit [this README](README.md) and explain your design, how it works, and how to test it.
-- Share your project on your social network of choice:
-  - LinkedIn [#tinytapeout](https://www.linkedin.com/search/results/content/?keywords=%23tinytapeout) [@TinyTapeout](https://www.linkedin.com/company/100708654/)
-  - Mastodon [#tinytapeout](https://chaos.social/tags/tinytapeout) [@matthewvenn](https://chaos.social/@matthewvenn)
-  - X (formerly Twitter) [#tinytapeout](https://twitter.com/hashtag/tinytapeout) [@tinytapeout](https://twitter.com/tinytapeout)
-  - Bluesky [@tinytapeout.com](https://bsky.app/profile/tinytapeout.com)
+## External hardware
+
+- Tiny VGA PMOD (or any 2-bit-per-channel resistor DAC) on the dedicated outputs `uo[7:0]`.
+- A VGA monitor.
