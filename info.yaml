@@ -3,7 +3,7 @@ project:
   title:        "tt_um_vga_hypno_spiral"      # Project title
   author:       "Joshua Azriel Cuarteron"      # Your name
   discord:      "harakine_"      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "Black & WHite Hypnotizing Background"      # One line description of what your project does
+  description:  "Black & White Hypnotizing Background"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     25175000       # Clock frequency in Hz (or 0 if not applicable)
 
